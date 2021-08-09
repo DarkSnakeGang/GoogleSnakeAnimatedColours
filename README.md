@@ -48,34 +48,34 @@ This won't take effect until you re-enter the snake.animate command.
 
 ### Commands for easy copying and pasting
 
-`
-//Snake body
 
-snake.animate("defaultPattern")
+  //Snake body
+  
+  snake.animate("defaultPattern")
+  
+  snake.animate("seizure")
+  
+  snake.animate("temporalRainbow")
+  
+  snake.animate("rollingRainbow")
+  
+  snake.animate("rollingRainbowRev")
+  
+  snake.animate("strobeRainbow")
+  
+  snake.animate("variation")
+  
+  snake.animate("variationV2")
+  
+  //Snake background - (other patterns can be used than temporalRainbow for the snake)
+  
+  snake.animate("temporalRainbow","randomHexBg")
+  
+  snake.animate("temporalRainbow","randomHexSameBg")
+  
+  snake.animate("temporalRainbow","temporalBg")
+  
+  snake.animate("temporalRainbow","rollingRainbowBg")
+  
+  snake.animate("temporalRainbow","rollingRainbowBgOld")
 
-snake.animate("seizure")
-
-snake.animate("temporalRainbow")
-
-snake.animate("rollingRainbow")
-
-snake.animate("rollingRainbowRev")
-
-snake.animate("strobeRainbow")
-
-snake.animate("variation")
-
-snake.animate("variationV2")
-
-//Snake background - (other patterns can be used than temporalRainbow for the snake)
-
-snake.animate("temporalRainbow","randomHexBg")
-
-snake.animate("temporalRainbow","randomHexSameBg")
-
-snake.animate("temporalRainbow","temporalBg")
-
-snake.animate("temporalRainbow","rollingRainbowBg")
-
-snake.animate("temporalRainbow","rollingRainbowBgOld")
-`
