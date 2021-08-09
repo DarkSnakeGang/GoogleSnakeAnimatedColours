@@ -49,33 +49,22 @@ This won't take effect until you re-enter the snake.animate command.
 ### Commands for easy copying and pasting
 
 ```
-  //Snake body
+//Snake body
+
+snake.animate("defaultPattern")//laggy
+snake.animate("seizure")//laggy
+snake.animate("temporalRainbow")//less laggy
+snake.animate("rollingRainbow")//less laggy
+snake.animate("rollingRainbowRev")//less laggy
+snake.animate("strobeRainbow")//laggy
+snake.animate("variation")//laggy
+snake.animate("variationV2")//laggy
   
-  snake.animate("defaultPattern")
+//Snake background - (other patterns can be used than temporalRainbow for the snake)
   
-  snake.animate("seizure")
-  
-  snake.animate("temporalRainbow")
-  
-  snake.animate("rollingRainbow")
-  
-  snake.animate("rollingRainbowRev")
-  
-  snake.animate("strobeRainbow")
-  
-  snake.animate("variation")
-  
-  snake.animate("variationV2")
-  
-  //Snake background - (other patterns can be used than temporalRainbow for the snake)
-  
-  snake.animate("temporalRainbow","randomHexBg")
-  
-  snake.animate("temporalRainbow","randomHexSameBg")
-  
-  snake.animate("temporalRainbow","temporalBg")
-  
-  snake.animate("temporalRainbow","rollingRainbowBg")
-  
-  snake.animate("temporalRainbow","rollingRainbowBgOld")
+snake.animate("temporalRainbow","randomHexBg")
+snake.animate("temporalRainbow","randomHexSameBg")
+snake.animate("temporalRainbow","temporalBg")
+snake.animate("temporalRainbow","rollingRainbowBg")
+snake.animate("temporalRainbow","rollingRainbowBgOld")
 ```
