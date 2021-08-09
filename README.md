@@ -48,7 +48,7 @@ This won't take effect until you re-enter the snake.animate command.
 
 ### Commands for easy copying and pasting
 
-
+```
   //Snake body
   
   snake.animate("defaultPattern")
@@ -78,4 +78,4 @@ This won't take effect until you re-enter the snake.animate command.
   snake.animate("temporalRainbow","rollingRainbowBg")
   
   snake.animate("temporalRainbow","rollingRainbowBgOld")
-
+```
