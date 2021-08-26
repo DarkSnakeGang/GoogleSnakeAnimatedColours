@@ -4,7 +4,7 @@ This project lets you have different animated patterns for the snake, and also f
 
 To install:
 1. Download the bookmark file in [releases](https://github.com/DarkSnakeGang/GoogleSnakeAnimatedColours/releases/tag/1.0)
-2 .Import the bookmark into your browser
+2. Import the bookmark into your browser
 3. Start playing google snake
 4. Click the bookmark
 5. Switch to the rainbow snake
