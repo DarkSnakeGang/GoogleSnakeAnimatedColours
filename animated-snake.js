@@ -17,6 +17,9 @@ window.snake.animate = function(pattern, backgroundPattern){
 
   /*Can we cache the images for snake's head?*/
   animateSnakeGlobals.cacheMode = ["temporalRainbow", "rollingRainbow", "rollingRainbowRev"].includes(pattern);
+  if(pattern.startsWith('singleColourFunctionCreator')) {
+    animateSnakeGlobals.cacheMode = true;
+  }
 
   const scripts = document.body.getElementsByTagName('script');
     for(let script of scripts) {
@@ -127,7 +130,7 @@ function processCode(code, pattern, backgroundPattern) {
 
 function setupCaching(code) {
   let recolourImageFunction = findFunctionInCode(code,
-    /[$a-zA-Z0-9_]{0,6}=function\(a,\n?b,c\)$/,
+    /[$a-zA-Z0-9_]{0,6}=function\(a,b,\n?c\)$/,
     /putImageData/,
     true);
   let canvasContext = recolourImageFunction.match(/a\.([$a-zA-Z0-9_]{0,6})\.putImageData/)[1];
@@ -435,6 +438,21 @@ let variationV2 = (function() {
   }
   return variationV2;
 })();
+
+function singleColourFunctionCreator(hexcode) {
+  if(!/^#[0-9a-f]{6}$/i.test(hexcode)) {
+    hexcode = '#ffffff';
+  }
+  function singleColour() {
+    let colourArray = [];
+    for(let i = 0; i<10; i++) {
+      colourArray[i] = hexcode;
+    }
+    return colourArray;
+  }
+  
+  return singleColour;
+}
 
 /* Below are custom backgrounds */
 function randomHexBg(a, frameNum, x, y) {
