@@ -2,54 +2,59 @@
 let animateSnakeGlobals = {
   startPlayback: false,
   startingTime: 0,
-  framesPerSecond: 60,
+  framesPerSecond: 30,
   frameDoneSoFar: 0,
   currentColourArray: ["#FFFFFF","#000000"],
   cacheMode: false,
   cache: [],
+  currentPatternString:"none",
+  isPatternDisabled:false,
+  currentBackgroundPatternString:"none",
+  isBackgroundPatternDisabled:false,
 };
 
-window.snake.animate = function(pattern, backgroundPattern){
-  /*pattern is a string which contains the name of a function that takes a frame number (60fps) and returns an array with all the hex colours along the snake's body*/
-  if(pattern === undefined) {
-    pattern = "defaultPattern";
-  }
+/*Change to false when releasing - turns on console.log printing*/
+let animatedSnakeModDebug = false;
 
-  /*Can we cache the images for snake's head?*/
-  animateSnakeGlobals.cacheMode = ["temporalRainbow", "rollingRainbow", "rollingRainbowRev"].includes(pattern);
-  if(pattern.startsWith('singleColourFunctionCreator')) {
-    animateSnakeGlobals.cacheMode = true;
-  }
+window.snake.animate = function(){
+  injectInitialHtmlAnimatedSnake();
+  setupEventListenersAnimatedSnake();
+
+  /*Set up default pattern to use (If I change this then I also need to change "selected" in the html)*/
+  changePatterns("rollingRainbowRev","none");
 
   const scripts = document.body.getElementsByTagName('script');
     for(let script of scripts) {
+      if(script.src == "" || script.src.indexOf('apis.google.com') != -1){
+        continue;
+      }
       const req = new XMLHttpRequest();
       req.open('GET', script.src);
       req.onload = function() {
-        if(this.responseText.indexOf('"#A2') !== -1)
-          processCode(this.responseText, pattern, backgroundPattern);
+        if(this.responseText.indexOf('trophy') !== -1)
+          processCode(this.responseText);
       };
       req.send();
     }
 };
 
-function processCode(code, pattern, backgroundPattern) {
+function processCode(code) {
   /*find the name of the variable representing how many turns the snake has been alive for*/
   let lifetime = "a.ticks";
-  console.log(lifetime);
+  animatedSnakeModDebug && console.log(lifetime);
 
   /*find names of variables with snake eyes/tongue etc*/
 
-  let [, headColour, blinkImg, eatImg, dieImg] = code.match(/([$a-zA-Z0-9_]{0,6})=b\[0\],\n?this\.[$a-zA-Z0-9_]{0,6}=b\[1\],\n?[$a-zA-Z0-9_]{0,6}\(this\.([$a-zA-Z0-9_]{0,6}),"#5282F2",this\.[$a-zA-Z0-9_]{0,6}\),\n?[$a-zA-Z0-9_]{0,6}\(this\.([$a-zA-Z0-9_]{0,6}),"#5282F2",this\.[$a-zA-Z0-9_]{0,6}\),\n?[$a-zA-Z0-9_]{0,6}\(this.([$a-zA-Z0-9_]{0,6}),"#5282F2",this.[$a-zA-Z0-9_]{0,6}\)/);
+  let [, headColour, blinkImg, eatImg, dieImg] = code.match(/([$a-zA-Z0-9_]{0,6})=b\[0\],\n?this\.[$a-zA-Z0-9_]{0,6}=b\[1\],\n?[$a-zA-Z0-9_]{0,6}\(this\.([$a-zA-Z0-9_]{0,6}),"#5282F2",this\.[$a-zA-Z0-9_]{0,6}\),\n?[$a-zA-Z0-9_]{0,6}\(this\.([$a-zA-Z0-9_]{0,6}),"#5282F2",this\.[$a-zA-Z0-9_]{0,6}\),\n?[$a-zA-Z0-9_]{0,6}\(this.([$a-zA-Z0-9_]{0,6}),"#5282F2",\n?this.[$a-zA-Z0-9_]{0,6}\)/);
   let [, colourChangeFunc, snakeTongue, func2, func3] = code.match(/([$a-zA-Z0-9_]{0,6})\(this\.([$a-zA-Z0-9_]{0,6}),"#C73104",([$a-zA-Z0-9_]{0,6})\(([$a-zA-Z0-9_]{0,6})\(/);
   let hueFunc = code.match(/([$a-zA-Z0-9_]{0,6})\("#C73104"\)\,[$a-zA-Z0-9_]{0,6}\[0\]=\([$a-zA-Z0-9_]{0,6}\[0\]\+180/)[1];
 
-  console.log(`${headColour},${blinkImg},${eatImg},${dieImg},${colourChangeFunc},${snakeTongue}`);
+  animatedSnakeModDebug && console.log(`${headColour},${blinkImg},${eatImg},${dieImg},${colourChangeFunc},${snakeTongue}`);
   /*grab code for the function we need to hijack*/
   let snakeColourFunction = findFunctionInCode(code,
     /[$a-zA-Z0-9_]{0,6}=function\(a,b,c,d,e\)$/,
     /a\.[$a-zA-Z0-9_]{0,6}&&10!==a\.[$a-zA-Z0-9_]{0,6}/,
-    true);
+    animatedSnakeModDebug);
   
   let updateHeadCode = `function updateHeadColour(a, headColour) {
     a.${headColour} = headColour;
@@ -66,26 +71,29 @@ function processCode(code, pattern, backgroundPattern) {
   
   /*need to change a bit of code so that the head can change colour even for the rainbow snake*/
   let regex1 = /0===this\.[$a-zA-Z0-9_]{0,6}\|\|10===this\.[$a-zA-Z0-9_]{0,6}/;
-  let func1 = findFunctionInCode(code,/[$a-zA-Z0-9_]{0,6}\.prototype\.[$a-zA-Z0-9_]{0,6}=function\(\)$/,regex1,true);
-  func1 = func1.replace(/\|\|10===this\.[$a-zA-Z0-9_]{0,6}/,"|| false");
+  let func1 = findFunctionInCode(code,/[$a-zA-Z0-9_]{0,6}\.prototype\.[$a-zA-Z0-9_]{0,6}=function\(\)$/,regex1,animatedSnakeModDebug);
+  func1 = assertReplace(func1,/\|\|10===this\.[$a-zA-Z0-9_]{0,6}/,"|| false");
   eval(func1);
 
   /* Enable caching */
   setupCaching(code);
 
   /* Background colour stuff */
-  let [,rectangle,miniCanvas,tileLength] = code.match(/([$a-zA-Z0-9_]{0,6})\.height;d\+\+\)0!==\n?\(c\+d\)%2&&\(a\.([$a-zA-Z0-9_]{0,6})\.fillStyle="#A2D149",a\.[$a-zA-Z0-9_]{0,6}\.fillRect\(c\*a\.([$a-zA-Z0-9_]{0,6})/);
+  let [,rectangle,miniCanvas,tileLength] = code.match(/([$a-zA-Z0-9_]{0,6})\.height;d\+\+\)0!==\n?\(c\+d\)%2&&\(a\.([$a-zA-Z0-9_]{0,6})\.fillStyle="#a2d149",a\.[$a-zA-Z0-9_]{0,6}\.fillRect\(c\*a\.([$a-zA-Z0-9_]{0,6})/);
 
   let updateBackgroundFunc = `function updateBackground(a, frameNum) {
+    if(animateSnakeGlobals.isBackgroundPatternDisabled) {
+      return;
+    }
     for (c = 0; c < a.${rectangle}.width; c++) {
       for (d = 0; d < a.${rectangle}.height; d++) {
-        a.${miniCanvas}.fillStyle = ${backgroundPattern}(a, frameNum, c, d);
+        a.${miniCanvas}.fillStyle = getColourArrayFromCurrentBackgroundPattern(a, frameNum, c, d);
         a.${miniCanvas}.fillRect(c * a.${tileLength}, d * a.${tileLength}, a.${tileLength}, a.${tileLength});
       }
     }
   }`;
-  console.log(updateBackgroundFunc);
-  (backgroundPattern !== undefined) ? eval(updateBackgroundFunc):eval("function updateBackground(){return;}");
+  animatedSnakeModDebug && console.log(updateBackgroundFunc);
+  eval(updateBackgroundFunc);
 
   /* Use a safer shadow colour */
   eval(
@@ -102,54 +110,199 @@ function processCode(code, pattern, backgroundPattern) {
     animateSnakeGlobals.startingTime = performance.now();
   }`;
 
-  snakeColourFunction = snakeColourFunction.replace("{", "{" + resetAnimationCode);
+  snakeColourFunction = assertReplace(snakeColourFunction,"{", "{" + resetAnimationCode);
 
   /*$& has a special meaning in replace()*/
   let hijackArrayCode = `if(animateSnakeGlobals.startPlayback) {
-    var frameNum = Math.floor((performance.now() + ${0.5*1000/animateSnakeGlobals.framesPerSecond}
-     - animateSnakeGlobals.startingTime)/${1000/animateSnakeGlobals.framesPerSecond});
+    var frameNum = Math.floor((performance.now() + (0.5*1000/animateSnakeGlobals.framesPerSecond)
+     - animateSnakeGlobals.startingTime)/(1000/animateSnakeGlobals.framesPerSecond));
     
     if(frameNum !== animateSnakeGlobals.frameDoneSoFar) {
-      animateSnakeGlobals.currentColourArray = ${pattern}(frameNum);
       animateSnakeGlobals.frameDoneSoFar = frameNum;
 
-      updateHeadColour(a, animateSnakeGlobals.currentColourArray[0]);
+      if(!animateSnakeGlobals.isPatternDisabled) {
+        animateSnakeGlobals.currentColourArray = getColourArrayFromCurrentPattern(frameNum);
+        updateHeadColour(a, animateSnakeGlobals.currentColourArray[0]);
+      }
       updateBackground(a, frameNum);
     }
-    var f = animateSnakeGlobals.currentColourArray;
-    
+      var g = animateSnakeGlobals.currentColourArray;
   }
   else {
     $&
   }`;
-  snakeColourFunction = snakeColourFunction.replace(/var f=e\?[$a-zA-Z0-9_]{0,6}:[$a-zA-Z0-9_]{0,6};/, hijackArrayCode);
+  snakeColourFunction = assertReplace(snakeColourFunction,/var g=e\?[$a-zA-Z0-9_]{0,6}:[$a-zA-Z0-9_]{0,6};/, hijackArrayCode);
   
-  console.log(snakeColourFunction);
+  animatedSnakeModDebug && console.log(snakeColourFunction);
   eval(snakeColourFunction);
+}
+
+function getColourArrayFromCurrentPattern(frameNum) {
+  return window[animateSnakeGlobals.currentPatternString](frameNum);
+}
+
+function getColourArrayFromCurrentBackgroundPattern(a, frameNum, c, d) {
+  return window[animateSnakeGlobals.currentBackgroundPatternString](a, frameNum, c, d);
+}
+
+function changePatterns(pattern, backgroundPattern) {
+  /*pattern is a string which contains the name of a function that takes a frame number (60fps) and returns an array with all the hex colours along the snake's body*/
+  animateSnakeGlobals.currentPatternString = pattern;
+  animateSnakeGlobals.currentBackgroundPatternString = backgroundPattern;
+
+  /*Can we cache the images for snake's head?*/
+  animateSnakeGlobals.cacheMode = ["temporalRainbow", "rollingRainbow", "rollingRainbowRev", "none"].includes(pattern);
+  if(pattern.startsWith('singleColourFunctionCreator')) {
+    animateSnakeGlobals.cacheMode = true;
+  }
+
+  //Show laggy notice if we aren't caching
+  let lagNotice = document.getElementById('lag-notice');
+  lagNotice.style.display = (animateSnakeGlobals.cacheMode ? 'none' : 'inline');
+
+  //Turn off patterns if we don't want them
+  animateSnakeGlobals.isPatternDisabled = (pattern === "none");
+  animateSnakeGlobals.isBackgroundPatternDisabled = (backgroundPattern === "none");
+}
+
+function changeFrameRate(newFrameRate) {
+  let frameRate = parseFloat(newFrameRate);
+  if(isNaN(frameRate)) {
+    return false;
+  }
+  if(frameRate < 0.00001) {
+    return false;
+  }
+  if(frameRate > 60) {
+    if(confirm('This frame rate may be buggy/laggy')) {
+      setFrameRate(frameRate);
+    } else {
+      return false;
+    }
+  }
+  setFrameRate(frameRate);
+}
+
+function setFrameRate(frameRate) {
+  /*set new frameRate*/
+  animateSnakeGlobals.framesPerSecond = frameRate;
+  document.getElementById('current-frame-rate').textContent = frameRate;
 }
 
 function setupCaching(code) {
   let recolourImageFunction = findFunctionInCode(code,
-    /[$a-zA-Z0-9_]{0,6}=function\(a,b,\n?c\)$/,
+    /[$a-zA-Z0-9_]{0,6}=function\(a,b,c,d\)$/,
     /putImageData/,
-    true);
+    animatedSnakeModDebug);
   let canvasContext = recolourImageFunction.match(/a\.([$a-zA-Z0-9_]{0,6})\.putImageData/)[1];
 
-  recolourImageFunction = recolourImageFunction.replace(/a\.([$a-zA-Z0-9_]{0,6})\.putImageData\(([$a-zA-Z0-9_]{0,6}),0,0\)/,
-  `if(animateSnakeGlobals.cacheMode) animateSnakeGlobals.cache[a.path + hex] = d;
+  recolourImageFunction = assertReplace(recolourImageFunction,/a\.([$a-zA-Z0-9_]{0,6})\.putImageData\(([$a-zA-Z0-9_]{0,6}),0,0\)/,
+  `if(animateSnakeGlobals.cacheMode) animateSnakeGlobals.cache[a.path + hex] = f;
     a.$1.putImageData($2, 0, 0);
   }`);
   
   /*Order is important, as the previous bit needs to match on the correct putImageData*/
-  recolourImageFunction = recolourImageFunction.replace("if(a.loaded){",
+  recolourImageFunction = assertReplace(recolourImageFunction,"if(a.loaded){",
   `var hex = c;
   if(a.loaded){
     if(animateSnakeGlobals.cacheMode && (a.path + hex) in animateSnakeGlobals.cache) {
       a.${canvasContext}.putImageData(animateSnakeGlobals.cache[a.path + hex], 0, 0)
     }
     else {`);
-  console.log(recolourImageFunction);
+  animatedSnakeModDebug && console.log(recolourImageFunction);
   eval(recolourImageFunction);
+}
+
+function injectInitialHtmlAnimatedSnake() {
+  let initialHtml = 
+  `<div id="animated-snake-popup" style="margin:0px;position:fixed;z-index:9011;width:100%;">
+  <div style="width:300px;padding:10px;background-color:#373629;z-index:9012;border-color:black;border-style:solid;border-width:2px;;box-shadow: 0 3px 10px rgba(0,0,0,0.5);position:fixed;right:5px;top:5px">
+      <div class="font-effect-fire" style="text-align:center;padding:2px;background-color:transparent;font-family:sofia;font-size:25px">Animated Snake Colours</div>
+      <div style="background-color:#555543;margin-top:5px;padding:0px;padding-bottom:10px;font-family:calibri;color:#fffeec;">
+        <div style="margin:auto;padding:3px">
+          <p style="margin-top:0">You will need to choose the rainbow snake for the mod to work. <span style="color:red;">Warning: flashing lights.</span></p>
+          Snake Pattern
+          <br>
+          <select id="snake-pattern-chooser">
+            <option value="none">none</option>
+            <option value="defaultPattern">defaultPattern</option>
+            <option value="seizure">seizure</option>
+            <option value="temporalRainbow">temporalRainbow</option>
+            <option value="rollingRainbow">rollingRainbow</option>
+            <option value="rollingRainbowRev" selected="">rollingRainbowRev</option>
+            <option value="strobeRainbow">strobeRainbow</option>
+            <option value="variation">variation</option>
+            <option value="variationV2">variationV2</option>
+          </select>
+          <span id="lag-notice" style="display:none;font-size:0.7em">(Will be laggy)</span>
+        </div>
+        <div style="margin:auto;padding:3px">
+          Background Pattern
+          <br>
+          <select id="background-pattern-chooser">
+            <option value="none" selected="">none</option>
+            <option value="randomHexBg">randomHexBg</option>
+            <option value="randomHexSameBg">randomHexSameBg</option>
+            <option value="temporalBg">temporalBg</option>
+            <option value="rollingRainbowBg">rollingRainbowBg</option>
+            <option value="rollingRainbowBgOld">rollingRainbowBgOld</option>
+          </select>
+        </div>
+        <div style="margin:auto;padding:3px">
+        Frame rate <input id="frame-rate" type="text" size="3" value="30"><span> | Current Value: <span id="current-frame-rate">30</span></span>
+        </div>
+        <div style="margin:auto;padding:3px">
+        <button id="update-pattern" style="text-align:center;">Update Frame rate</button>
+        </div>
+        <div style="text-align:center;"><a id="animated-snake-close" href="#">Close</a> (Press j to show again)</div>
+      </div>
+  </div>
+</div>
+`;
+
+  let intialElement = document.createElement('div');
+  intialElement.style.backgroundColor = 'transparent';
+  intialElement.style.position = 'fixed';
+  intialElement.style.zIndex = '9011';
+  intialElement.innerHTML = initialHtml;
+
+  document.getElementsByTagName('body')[0].prepend(intialElement);
+
+  //Also inject css stylesheet needed for fire font
+  let linkEl = document.createElement('link');
+  linkEl.rel = 'stylesheet';
+  linkEl.href = 'https://fonts.googleapis.com/css?family=Sofia&effect=fire';
+  document.head.appendChild(linkEl);
+};
+
+function setupEventListenersAnimatedSnake() {
+  document.getElementById('animated-snake-close').onclick = function() {
+    document.getElementById('animated-snake-popup').hidden = true;
+  };
+
+  document.addEventListener('keydown',function(event) {
+    if(event.key == 'j') {
+      document.getElementById('animated-snake-popup').hidden = !document.getElementById('animated-snake-popup').hidden;
+    }
+  });
+
+  document.getElementById('snake-pattern-chooser').onchange = function() {
+    changePatterns(this.value,animateSnakeGlobals.currentBackgroundPatternString);
+  }
+
+  document.getElementById('background-pattern-chooser').onchange = function() {
+    changePatterns(animateSnakeGlobals.currentPatternString, this.value);
+  }
+
+  document.getElementById('update-pattern').onclick = function() {
+    changeFrameRate(document.getElementById('frame-rate').value);
+  }
+
+  document.getElementById('frame-rate').onkeyup = function(e) {
+    if(e.key === 'Enter') {
+      changeFrameRate(document.getElementById('frame-rate').value);
+    }
+  }
 }
 
 /*
@@ -221,11 +374,49 @@ function findFunctionInCode(code, functionSignature, somethingInsideFunction, lo
   }
   
   let fullFunction = code.substring(startIndex,endIndex + 1);
+
+  /*throw error if fullFunction doesn't contain something inside function - i.e. function signature was wrong*/
+  if(fullFunction.search(somethingInsideFunction) === -1) {
+    throw new Error("Function signature does not belong to the same function as somethingInsideFunction");
+  }
+
   if(logging) {
     console.log(fullFunction);
   }
 
   return fullFunction;
+}
+
+/*
+Same as replace, but throws an error if nothing is changed
+*/
+function assertReplace(baseText, regex, replacement) {
+  if(typeof baseText !== 'string') {
+    throw new Error('String argument expected for assertReplace');
+  }
+  let outputText = baseText.replace(regex, replacement);
+
+  if(baseText === outputText) {
+    throw new Error('Failed to make any changes with replace');
+  }
+
+  return outputText;
+}
+
+/*
+Same as replaceAll, but throws an error if nothing is changed
+*/
+function assertReplaceAll(baseText, regex, replacement) {
+  if(typeof baseText !== 'string') {
+    throw new Error('String argument expected for assertReplace');
+  }
+  let outputText = baseText.replaceAll(regex, replacement);
+
+  if(baseText === outputText) {
+    throw new Error('Failed to make any changes with replace');
+  }
+
+  return outputText;
 }
 
 /*below are custom patterns*/
@@ -294,7 +485,8 @@ function rollingRainbowRev(frameNum) {
 }
 
 /*note works best on lower fps*/
-let strobeRainbow = (function() {
+/*Hacky, but must use var instead of let so it can be accessed as window['functionName']*/
+var strobeRainbow = (function() {
   let colorsSplashes = [];
   function strobeRainbow(frameNum) {
     /*add new splashes of colour at random*/
@@ -335,7 +527,8 @@ let strobeRainbow = (function() {
   return strobeRainbow;
 })();
 
-let variation = (function() {
+/*Hacky, but must use var instead of let so it can be accessed as window['functionName']*/
+var variation = (function() {
   /*specify all colours in hsv*/
   let colorsSplashes = [];
   let baseColour = [0.3,1,1];
@@ -401,7 +594,8 @@ let variation = (function() {
   return variation;
 })();
 
-let variationV2 = (function() {
+/*Hacky, but must use var instead of let so it can be accessed as window['functionName']*/
+var variationV2 = (function() {
   /*specify all colours in hsv*/
   let baseColour = [0,1,1];
   const patternLength = 50;
@@ -466,7 +660,8 @@ function randomHexBg(a, frameNum, x, y) {
   return randColour;
 }
 
-let randomHexSameBg = (function() {
+/*Hacky, but must use var instead of let so it can be accessed as window['functionName']*/
+var randomHexSameBg = (function() {
   let currentFrameNum = 0;
   let currentColour = "#FFFFFF";
   return function (a, frameNum, x, y) {
@@ -589,3 +784,5 @@ function hsvToRgb(h, s, v) {
 
   return [ r * 255, g * 255, b * 255 ];
 }
+
+window.snake.animate();
