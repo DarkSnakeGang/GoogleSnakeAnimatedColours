@@ -10,6 +10,4 @@ To install:
 5. Switch to the rainbow snake (Very important)
 6. Use GUI to change the background/pattern/framerate
 
-# Currently broken, but fix coming VERY SOON
-
 ![image](https://user-images.githubusercontent.com/69080709/147800589-c7921e54-7eec-4ab9-a7b3-7da892c8d605.png)
