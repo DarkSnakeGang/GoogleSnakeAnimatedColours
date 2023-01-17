@@ -1,4 +1,4 @@
-# Animated Colours for Google Snake
+# [No longer works] Animated Colours for Google Snake
 
 This project lets you have different animated patterns for the snake, and also for the background. **Not recommended for people with photosensitive epilepsy**.
 
